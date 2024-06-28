@@ -7,6 +7,8 @@ import matplotlib.cm as cm
 from scipy.sparse import kron, eye, diags
 from scipy.sparse.linalg import spsolve
 
+# Test Change
+
 def calculateNumberDensity(particlePositions):
 	global Nc
 	global boxSize
