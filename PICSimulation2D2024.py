@@ -7,8 +7,6 @@ import matplotlib.cm as cm
 from scipy.sparse import kron, eye, diags
 from scipy.sparse.linalg import spsolve
 
-# Test Change
-
 def calculateNumberDensity(particlePositions):
 	global Nc
 	global boxSize
@@ -113,20 +111,6 @@ def calculatePotential(n):
     # Reshape the solution vector back to a 2D grid
 	phi = phi.reshape((Ny, Nx))
 
-	# Potential object in the middle
-	#for i in range(-10,10):
-	#	for j in range(-20,20):
-	#		phi[int(Ny/2)+i,int(Nx/2)+j] = phi[int(Ny/2)+i,int(Nx/2)+j]-1000*(1-(i/10)**2)*(i/10+1)**3*(1-(j/20)**2)
-
-	# Periodic potential
-	#for i in range(Nc[0]):
-	#	for j in range(Nc[1]):
-	#		phi[i,j] = phi[i,j]-10*(np.sin(i*np.pi/4)*np.sin(j*np.pi/4))**10
-
-	#print(np.mean(phi))
-	#print(np.min(phi))
-	#print(np.max(phi))
-
 	global plotPotential
 	if plotPotential == True:
 		if plotPotential == True:
@@ -164,9 +148,6 @@ def calculateElectricField(phi):
 	if plotElectricField == True:
 		x,y = np.meshgrid(np.linspace(0,boxSize[0],Ny),np.linspace(0,boxSize[1],Nx))
 		plt.quiver(x,y,EFieldx.T,EFieldy.T)
-
-	# Adding external field
-	EFieldx = EFieldx - 0.1
 
 	EField = np.array([EFieldx,EFieldy])
 	return EField
@@ -215,7 +196,7 @@ N			= 5000						# Number of particles
 Nc			= np.array([150,100])		# Mesh grid subdivisions
 t			= 0							# Start time of simulation (s)
 tEnd		= 50						# End time of simulation (s)
-Nt			= 1000					# Number of timesteps
+Nt			= 100						# Number of timesteps
 dt			= (tEnd-t)/Nt				# Time step size (s)
 boxSize		= np.array([150,100])		# Size of domain (From the origin)
 n0			= N/(boxSize[0]*boxSize[1])	# Average density
@@ -223,8 +204,8 @@ n0			= N/(boxSize[0]*boxSize[1])	# Average density
 # Output parameters
 plotParticles = True
 plotCellMarkers = False
-plotNumberDensity = True
-plotPotential = False
+plotNumberDensity = False
+plotPotential = True
 plotElectricField = False
 plotElectricFieldOnParticles = False
 
@@ -232,13 +213,10 @@ plotElectricFieldOnParticles = False
 np.random.seed(42)
 # Create initial plasma field
 particlePositions = np.random.rand(2, N) * boxSize[:, np.newaxis]
-particlePositions = [particlePositions[0]*0.01+0.5*boxSize[0],particlePositions[1]*0.0+0.5*boxSize[1]]
 
-#particleVelocities = np.random.rand(2, N) * 0
-particleVelocities = np.squeeze(np.array([0*np.ones(N),np.zeros(N)]))
+particleVelocities = np.random.rand(2, N) * 0
+
 particleAccelerations = np.random.rand(2, N) * 0
-# Initialise matricies
-
 
 # Initialize figure and axis
 fig, ax = plt.subplots()
