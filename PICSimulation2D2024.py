@@ -7,34 +7,35 @@ import matplotlib.cm as cm
 from scipy.sparse import kron, eye, diags
 from scipy.sparse.linalg import spsolve
 
-def calculateNumberDensity(particlePositions):
+def calculateNumberDensity(particle_positions):
 	global Nc
-	global boxSize
-	cellSize = boxSize/Nc
+	global box_size
+
+	cell_size = box_size/Nc
 
 	# Start by fining the coordinates of the cell in the cell coordinates (i,j) -> (i+1,j+1) that contain each particle in order bl, br, tl, tr
-	ijBL = np.floor(particlePositions / cellSize[:, np.newaxis]).astype(int)
-	ijBR = np.array([ijBL[0]+1,ijBL[1]])
-	ijTL = np.array([ijBL[0],ijBL[1]+1])
-	ijTR = np.array([ijBL[0]+1,ijBL[1]+1])
+	ij_BL = np.floor(particle_positions / cell_size[:, np.newaxis]).astype(int)
+	ij_BR = np.array([ij_BL[0]+1,ij_BL[1]])
+	ij_TL = np.array([ij_BL[0],ij_BL[1]+1])
+	ij_TR = np.array([ij_BL[0]+1,ij_BL[1]+1])
 
 	# The displacement of each particle from the ij to its bottom left in ij coordinates
-	dx, dy = particlePositions / cellSize[:, np.newaxis] - ijBL
+	dx, dy = particle_positions / cell_size[:, np.newaxis] - ij_BL
 
 	# Finding the weight each particle has on each of the corners of the cell that contains it
-	wijBL	= (1-dx) * (1-dy)
-	wijBR	= dx * (1-dy)
-	wijTL	= (1-dx) * dy
-	wijTR 	= dx * dy
+	ij_BL_weight	= (1-dx) * (1-dy)
+	ij_BR_weight	= dx * (1-dy)
+	ij_TL_weight	= (1-dx) * dy
+	ij_TR_weight 	= dx * dy
 
-	global plotCellMarkers
+	global plot_cell_markers
 	# Define the colormap
 	cmap = cm.get_cmap('Grays')
-	if plotCellMarkers == True:
-		plt.scatter(ijBL[0]*cellSize[0],ijBL[1]*cellSize[1],marker='+',c=cmap(wijBL))
-		plt.scatter(ijBR[0]*cellSize[0],ijBR[1]*cellSize[1],marker='+',c=cmap(wijBR))
-		plt.scatter(ijTL[0]*cellSize[0],ijTL[1]*cellSize[1],marker='+',c=cmap(wijTL))
-		plt.scatter(ijTR[0]*cellSize[0],ijTR[1]*cellSize[1],marker='+',c=cmap(wijTR))
+	if plot_cell_markers == True:
+		plt.scatter(ij_BL[0]*cell_size[0],ij_BL[1]*cell_size[1],marker='+',c=cmap(ij_BL_weight))
+		plt.scatter(ij_BR[0]*cell_size[0],ij_BR[1]*cell_size[1],marker='+',c=cmap(ij_BR_weight))
+		plt.scatter(ij_TL[0]*cell_size[0],ij_TL[1]*cell_size[1],marker='+',c=cmap(ij_TL_weight))
+		plt.scatter(ij_TR[0]*cell_size[0],ij_TR[1]*cell_size[1],marker='+',c=cmap(ij_TR_weight))
 
 	# Create a density array and add the weights from every particle
 	n = np.zeros((Nc[0]+1,Nc[1]+1))
@@ -44,19 +45,19 @@ def calculateNumberDensity(particlePositions):
 				n[i, j] += w
     
     # Add weights from each direction
-	addToGrid(ijBL, wijBL)
-	addToGrid(ijBR, wijBR)
-	addToGrid(ijTL, wijTL)
-	addToGrid(ijTR, wijTR)
+	addToGrid(ij_BL, ij_BL_weight)
+	addToGrid(ij_BR, ij_BR_weight)
+	addToGrid(ij_TL, ij_TL_weight)
+	addToGrid(ij_TR, ij_TR_weight)
 
-	global plotNumberDensity
-	if plotNumberDensity == True:
+	global plot_number_density
+	if plot_number_density == True:
 		#scaled_grid = np.kron(n, np.ones((5, 5)))
 
 		# Plot the shifted grid
-		plt.imshow((n.T)/5%1, origin='lower',extent=[-cellSize[0]/2,boxSize[0]+cellSize[0]/2,-cellSize[1]/2,boxSize[1]+cellSize[1]/2], cmap='jet', interpolation='bilinear',vmax=0.5)
+		plt.imshow((n.T)/5%1, origin='lower',extent=[-cell_size[0]/2,box_size[0]+cell_size[0]/2,-cell_size[1]/2,box_size[1]+cell_size[1]/2], cmap='jet', interpolation='bilinear',vmax=0.5)
 
-	return n, ijBL, ijBR, ijTL, ijTR, wijBL, wijBR, wijTL, wijTR
+	return n, ij_BL, ij_BR, ij_TL, ij_TR, ij_BL_weight, ij_BR_weight, ij_TL_weight, ij_TR_weight
 
 def calculatePotential(n):
 	"""
@@ -64,23 +65,23 @@ def calculatePotential(n):
     
     Parameters:
     n (numpy.ndarray): 2D array representing the number density matrix.
-    cellSize (list or tuple): Array containing the cell sizes [Delta x, Delta y].
+    cell_size (list or tuple): Array containing the cell sizes [Delta x, Delta y].
     
     Returns:
     numpy.ndarray: 2D array representing the potential matrix phi.
     """
 	global Nc
-	global boxSize
-	cellSize = boxSize/Nc
+	global box_size
+	cell_size = box_size/Nc
 
 	global N
-	n0 = N/(boxSize[0]*boxSize[1])
+	n0 = N/(box_size[0]*box_size[1])
 
 	n = n - n0
 
     # Extract grid sizes and cell sizes
 	Ny, Nx = n.shape
-	delta_x, delta_y = cellSize
+	delta_x, delta_y = cell_size
 
     # Create 1D finite difference matrix for x-direction
 	main_diag_x = -2 * np.ones(Nx)
@@ -111,22 +112,22 @@ def calculatePotential(n):
     # Reshape the solution vector back to a 2D grid
 	phi = phi.reshape((Ny, Nx))
 
-	global plotPotential
-	if plotPotential == True:
-		if plotPotential == True:
+	global plot_potential
+	if plot_potential == True:
+		if plot_potential == True:
 			# Plot the shifted grid
-			plt.imshow((phi.T), origin='lower',extent=[-cellSize[0]/2,boxSize[0]+cellSize[0]/2,-cellSize[1]/2,boxSize[1]+cellSize[1]/2], cmap='jet', interpolation='bilinear')
+			plt.imshow((phi.T), origin='lower',extent=[-cell_size[0]/2,box_size[0]+cell_size[0]/2,-cell_size[1]/2,box_size[1]+cell_size[1]/2], cmap='jet', interpolation='bilinear')
 
 	return phi
 
 def calculateElectricField(phi):
 	global Nc
-	global boxSize
-	cellSize = boxSize/Nc
+	global box_size
+	cell_size = box_size/Nc
 
     # Extract grid sizes and cell sizes
 	Ny, Nx = phi.shape
-	delta_x, delta_y = cellSize
+	delta_x, delta_y = cell_size
 
     # Create 1D finite difference matrix for x-direction
 	off_diag_x = np.ones(Nx - 1)
@@ -141,21 +142,21 @@ def calculateElectricField(phi):
 	A1D_y[-1, 0] = 1
 
 	#print(phi.shape)
-	EFieldy = -phi@A1D_x/(2*delta_x)
-	EFieldx = A1D_y@phi/(2*delta_y)
+	E_fieldy = -phi@A1D_x/(2*delta_x)
+	E_fieldx = A1D_y@phi/(2*delta_y)
 
-	global plotElectricField
-	if plotElectricField == True:
-		x,y = np.meshgrid(np.linspace(0,boxSize[0],Ny),np.linspace(0,boxSize[1],Nx))
-		plt.quiver(x,y,EFieldx.T,EFieldy.T)
+	global plot_electric_field
+	if plot_electric_field == True:
+		x,y = np.meshgrid(np.linspace(0,box_size[0],Ny),np.linspace(0,box_size[1],Nx))
+		plt.quiver(x,y,E_fieldx.T,E_fieldy.T)
 
-	EField = np.array([EFieldx,EFieldy])
-	return EField
+	E_field = np.array([E_fieldx,E_fieldy])
+	return E_field
 
-def calculateAcceleration(EField, ijBL, ijBR, ijTL, ijTR, wijBL, wijBR, wijTL, wijTR):
-	ExOnParticles = []
-	EyOnParticles = []
-	N = ijBL.shape[1]
+def calculateAcceleration(E_field, ij_BL, ij_BR, ij_TL, ij_TR, ij_BL_weight, ij_BR_weight, ij_TL_weight, ij_TR_weight):
+	E_x_on_particles = []
+	E_y_on_particles = []
+	N = ij_BL.shape[1]
 	
 	def applyField(ij, wij):
 		ExFromij = []
@@ -164,30 +165,30 @@ def calculateAcceleration(EField, ijBL, ijBR, ijTL, ijTR, wijBL, wijBR, wijTL, w
 			i = ij[0, n]
 			j = ij[1, n]
 			weight = wij[n]
-			Ex = EField[0, i, j] * weight
-			Ey = EField[1, i, j] * weight
+			Ex = E_field[0, i, j] * weight
+			Ey = E_field[1, i, j] * weight
 			ExFromij.append(Ex)
 			EyFromij.append(Ey)
 		return ExFromij, EyFromij
 	
-	ExBL, EyBL = applyField(ijBL, wijBL)
-	ExBR, EyBR = applyField(ijBR, wijBR)
-	ExTL, EyTL = applyField(ijTL, wijTL)
-	ExTR, EyTR = applyField(ijTR, wijTR)
+	E_x_BL, E_y_BL = applyField(ij_BL, ij_BL_weight)
+	E_x_BR, E_y_BR = applyField(ij_BR, ij_BR_weight)
+	E_x_TL, E_y_TL = applyField(ij_TL, ij_TL_weight)
+	E_x_TR, E_y_TR = applyField(ij_TR, ij_TR_weight)
 	
 	for n in range(N):
-		Ex = ExBL[n] + ExBR[n] + ExTL[n] + ExTR[n]
-		Ey = EyBL[n] + EyBR[n] + EyTL[n] + EyTR[n]
-		ExOnParticles.append(Ex)
-		EyOnParticles.append(Ey)
+		Ex = E_x_BL[n] + E_x_BR[n] + E_x_TL[n] + E_x_TR[n]
+		Ey = E_y_BL[n] + E_y_BR[n] + E_y_TL[n] + E_y_TR[n]
+		E_x_on_particles.append(Ex)
+		E_y_on_particles.append(Ey)
 		
-	EOnParticles = np.array([ExOnParticles, EyOnParticles])
+	EOnParticles = np.array([E_x_on_particles, E_y_on_particles])
     
-	global plotElectricFieldOnParticles
-	if plotElectricFieldOnParticles == True:
-		global particlePositions
-		x,y = particlePositions
-		plt.quiver(x,y,ExOnParticles,EyOnParticles)
+	global plot_electric_field_on_particles
+	if plot_electric_field_on_particles == True:
+		global particle_positions
+		x,y = particle_positions
+		plt.quiver(x,y,E_x_on_particles,E_y_on_particles)
 	
 	return EOnParticles
 
@@ -198,25 +199,25 @@ t			= 0							# Start time of simulation (s)
 tEnd		= 50						# End time of simulation (s)
 Nt			= 100						# Number of timesteps
 dt			= (tEnd-t)/Nt				# Time step size (s)
-boxSize		= np.array([150,100])		# Size of domain (From the origin)
-n0			= N/(boxSize[0]*boxSize[1])	# Average density
+box_size		= np.array([150,100])		# Size of domain (From the origin)
+n0			= N/(box_size[0]*box_size[1])	# Average density
 
 # Output parameters
-plotParticles = True
-plotCellMarkers = False
-plotNumberDensity = False
-plotPotential = True
-plotElectricField = False
-plotElectricFieldOnParticles = False
+plot_particles = True
+plot_cell_markers = False
+plot_number_density = False
+plot_potential = True
+plot_electric_field = False
+plot_electric_field_on_particles = False
 
 # Initial particle conditions
 np.random.seed(42)
 # Create initial plasma field
-particlePositions = np.random.rand(2, N) * boxSize[:, np.newaxis]
+particle_positions = np.random.rand(2, N) * box_size[:, np.newaxis]
 
-particleVelocities = np.random.rand(2, N) * 0
+particle_velocities = np.random.rand(2, N) * 0
 
-particleAccelerations = np.random.rand(2, N) * 0
+particle_accelerations = np.random.rand(2, N) * 0
 
 # Initialize figure and axis
 fig, ax = plt.subplots()
@@ -225,41 +226,41 @@ ax.set_aspect('equal', adjustable='box')
 
 # Main Loop Stuff
 def update():
-		global particlePositions
-		global particleVelocities
-		global particleAccelerations
-		global boxSize
+		global particle_positions
+		global particle_velocities
+		global particle_accelerations
+		global box_size
 
 		# 1/2 kick
-		particleVelocities += particleAccelerations * dt / 2
+		particle_velocities += particle_accelerations * dt / 2
 
 		# Drift and applying periodic boundry conditions
-		particlePositions += particleVelocities * dt
-		particlePositions = np.mod(particlePositions, boxSize[:, np.newaxis])
+		particle_positions += particle_velocities * dt
+		particle_positions = np.mod(particle_positions, box_size[:, np.newaxis])
 
 		# Find new number densities
-		n, ijBL, ijBR, ijTL, ijTR, wijBL, wijBR, wijTL, wijTR = calculateNumberDensity(particlePositions)
+		n, ij_BL, ij_BR, ij_TL, ij_TR, ij_BL_weight, ij_BR_weight, ij_TL_weight, ij_TR_weight = calculateNumberDensity(particle_positions)
 
 		phi = calculatePotential(n)
 
-		EField = calculateElectricField(phi)
+		E_field = calculateElectricField(phi)
 
 		# Update accelerations
-		particleAccelerations = calculateAcceleration(EField, ijBL, ijBR, ijTL, ijTR, wijBL, wijBR, wijTL, wijTR)
+		particle_accelerations = calculateAcceleration(E_field, ij_BL, ij_BR, ij_TL, ij_TR, ij_BL_weight, ij_BR_weight, ij_TL_weight, ij_TR_weight)
 
 		# 1/2 kick
-		particleVelocities += particleAccelerations * dt / 2
+		particle_velocities += particle_accelerations * dt / 2
 		return
 
 def plot():
-	global plotParticles
-	if plotParticles == True:
-		plt.scatter(particlePositions[0],particlePositions[1],c='black',s=0.5)
+	global plot_particles
+	if plot_particles == True:
+		plt.scatter(particle_positions[0],particle_positions[1],c='black',s=0.5)
 
 def animate(frame):
 	ax.clear()
-	plt.xlim(0-10, boxSize[0]+10)	# Adjust these limits according to your data
-	plt.ylim(0-10, boxSize[1]+10)	# Adjust these limits according to your data
+	plt.xlim(0-10, box_size[0]+10)	# Adjust these limits according to your data
+	plt.ylim(0-10, box_size[1]+10)	# Adjust these limits according to your data
 	update()
 	plot()
 
