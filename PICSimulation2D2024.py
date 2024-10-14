@@ -7,7 +7,7 @@ import matplotlib.cm as cm
 from scipy.sparse import kron, eye, diags
 from scipy.sparse.linalg import spsolve
 
-def calculateNumberDensity(particle_positions):
+def calculate_number_density(particle_positions):
 	global Nc
 	global box_size
 
@@ -59,7 +59,7 @@ def calculateNumberDensity(particle_positions):
 
 	return n, ij_BL, ij_BR, ij_TL, ij_TR, ij_BL_weight, ij_BR_weight, ij_TL_weight, ij_TR_weight
 
-def calculatePotential(n):
+def calculate_potential(n):
 	"""
     Calculate the potential matrix phi given the number density matrix n and cell sizes.
     
@@ -120,7 +120,7 @@ def calculatePotential(n):
 
 	return phi
 
-def calculateElectricField(phi):
+def calculate_electric_field(phi):
 	global Nc
 	global box_size
 	cell_size = box_size/Nc
@@ -153,28 +153,28 @@ def calculateElectricField(phi):
 	E_field = np.array([E_fieldx,E_fieldy])
 	return E_field
 
-def calculateAcceleration(E_field, ij_BL, ij_BR, ij_TL, ij_TR, ij_BL_weight, ij_BR_weight, ij_TL_weight, ij_TR_weight):
+def calculate_acceleration(E_field, ij_BL, ij_BR, ij_TL, ij_TR, ij_BL_weight, ij_BR_weight, ij_TL_weight, ij_TR_weight):
 	E_x_on_particles = []
 	E_y_on_particles = []
 	N = ij_BL.shape[1]
 	
-	def applyField(ij, wij):
-		ExFromij = []
-		EyFromij = []
+	def apply_field(ij, wij):
+		E_x_from_ij = []
+		E_y_from_ij = []
 		for n in range(N):
 			i = ij[0, n]
 			j = ij[1, n]
 			weight = wij[n]
 			Ex = E_field[0, i, j] * weight
 			Ey = E_field[1, i, j] * weight
-			ExFromij.append(Ex)
-			EyFromij.append(Ey)
-		return ExFromij, EyFromij
+			E_x_from_ij.append(Ex)
+			E_y_from_ij.append(Ey)
+		return E_x_from_ij, E_y_from_ij
 	
-	E_x_BL, E_y_BL = applyField(ij_BL, ij_BL_weight)
-	E_x_BR, E_y_BR = applyField(ij_BR, ij_BR_weight)
-	E_x_TL, E_y_TL = applyField(ij_TL, ij_TL_weight)
-	E_x_TR, E_y_TR = applyField(ij_TR, ij_TR_weight)
+	E_x_BL, E_y_BL = apply_field(ij_BL, ij_BL_weight)
+	E_x_BR, E_y_BR = apply_field(ij_BR, ij_BR_weight)
+	E_x_TL, E_y_TL = apply_field(ij_TL, ij_TL_weight)
+	E_x_TR, E_y_TR = apply_field(ij_TR, ij_TR_weight)
 	
 	for n in range(N):
 		Ex = E_x_BL[n] + E_x_BR[n] + E_x_TL[n] + E_x_TR[n]
@@ -182,7 +182,7 @@ def calculateAcceleration(E_field, ij_BL, ij_BR, ij_TL, ij_TR, ij_BL_weight, ij_
 		E_x_on_particles.append(Ex)
 		E_y_on_particles.append(Ey)
 		
-	EOnParticles = np.array([E_x_on_particles, E_y_on_particles])
+	E_on_particles = np.array([E_x_on_particles, E_y_on_particles])
     
 	global plot_electric_field_on_particles
 	if plot_electric_field_on_particles == True:
@@ -190,7 +190,7 @@ def calculateAcceleration(E_field, ij_BL, ij_BR, ij_TL, ij_TR, ij_BL_weight, ij_
 		x,y = particle_positions
 		plt.quiver(x,y,E_x_on_particles,E_y_on_particles)
 	
-	return EOnParticles
+	return E_on_particles
 
 # Simulation parameters
 N			= 5000						# Number of particles
@@ -199,7 +199,7 @@ t			= 0							# Start time of simulation (s)
 tEnd		= 50						# End time of simulation (s)
 Nt			= 100						# Number of timesteps
 dt			= (tEnd-t)/Nt				# Time step size (s)
-box_size		= np.array([150,100])		# Size of domain (From the origin)
+box_size	= np.array([150,100])		# Size of domain (From the origin)
 n0			= N/(box_size[0]*box_size[1])	# Average density
 
 # Output parameters
@@ -239,14 +239,14 @@ def update():
 		particle_positions = np.mod(particle_positions, box_size[:, np.newaxis])
 
 		# Find new number densities
-		n, ij_BL, ij_BR, ij_TL, ij_TR, ij_BL_weight, ij_BR_weight, ij_TL_weight, ij_TR_weight = calculateNumberDensity(particle_positions)
+		n, ij_BL, ij_BR, ij_TL, ij_TR, ij_BL_weight, ij_BR_weight, ij_TL_weight, ij_TR_weight = calculate_number_density(particle_positions)
 
-		phi = calculatePotential(n)
+		phi = calculate_potential(n)
 
-		E_field = calculateElectricField(phi)
+		E_field = calculate_electric_field(phi)
 
 		# Update accelerations
-		particle_accelerations = calculateAcceleration(E_field, ij_BL, ij_BR, ij_TL, ij_TR, ij_BL_weight, ij_BR_weight, ij_TL_weight, ij_TR_weight)
+		particle_accelerations = calculate_acceleration(E_field, ij_BL, ij_BR, ij_TL, ij_TR, ij_BL_weight, ij_BR_weight, ij_TL_weight, ij_TR_weight)
 
 		# 1/2 kick
 		particle_velocities += particle_accelerations * dt / 2
